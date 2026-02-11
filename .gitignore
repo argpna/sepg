@@ -1,0 +1,8 @@
+docker/.env
+__pycache__
+.venv/
+*.egg-info/
+data/xml/*/
+data/staging/*/
+db/ddl/
+.scratchpad/
