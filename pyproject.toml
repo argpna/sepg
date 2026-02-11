@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sepg"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pyyaml>=6",
+  "psycopg2-binary>=2.9",
+  "requests>=2.32",
+  "py7zr>=1.0",
+  "bencodepy>=0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "pytest",
+  "pre-commit",
+]
+
+[project.scripts]
+sepg = "sepg.cli:main"
+
+[tool.setuptools]
+packages = ["sepg", "sepg.download"]
+
+[tool.setuptools.package-dir]
+"sepg" = "src/sepg"
+"sepg.download" = "src/sepg/download"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
