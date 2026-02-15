@@ -1,0 +1,9 @@
+table: Votes
+primary_key: Id
+columns:
+  Id: integer
+  PostId: integer
+  VoteTypeId: integer
+  CreationDate: timestamp
+  UserId: integer
+  BountyAmount: integer

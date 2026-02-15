@@ -1,0 +1,13 @@
+table: PostHistory
+primary_key: Id
+columns:
+  Id: integer
+  PostHistoryTypeId: integer
+  PostId: integer
+  RevisionGUID: varchar(64)
+  CreationDate: timestamp
+  UserId: integer
+  UserDisplayName: varchar(255)
+  Comment: text
+  Text: text
+  ContentLicense: varchar(64)

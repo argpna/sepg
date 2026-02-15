@@ -1,0 +1,9 @@
+table: Badges
+primary_key: Id
+columns:
+  Id: integer
+  UserId: integer
+  Name: varchar(200)
+  Date: timestamp
+  Class: integer
+  TagBased: boolean

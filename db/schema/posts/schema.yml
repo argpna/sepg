@@ -1,0 +1,25 @@
+table: Posts
+primary_key: Id
+columns:
+  Id: integer
+  PostTypeId: integer
+  AcceptedAnswerId: integer
+  ParentId: integer
+  CreationDate: timestamp
+  Score: integer
+  ViewCount: integer
+  Body: text
+  OwnerUserId: integer
+  OwnerDisplayName: varchar(255)
+  LastEditorUserId: integer
+  LastEditorDisplayName: varchar(255)
+  LastEditDate: timestamp
+  LastActivityDate: timestamp
+  Title: varchar(512)
+  Tags: varchar(1024)
+  AnswerCount: integer
+  CommentCount: integer
+  FavoriteCount: integer
+  ClosedDate: timestamp
+  CommunityOwnedDate: timestamp
+  ContentLicense: varchar(64)

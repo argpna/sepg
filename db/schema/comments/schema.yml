@@ -1,0 +1,11 @@
+table: Comments
+primary_key: Id
+columns:
+  Id: integer
+  PostId: integer
+  Score: integer
+  Text: text
+  CreationDate: timestamp
+  UserId: integer
+  UserDisplayName: varchar(255)
+  ContentLicense: varchar(64)

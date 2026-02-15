@@ -1,0 +1,8 @@
+table: Tags
+primary_key: Id
+columns:
+  Id: integer
+  TagName: varchar(255)
+  Count: integer
+  ExcerptPostId: integer
+  WikiPostId: integer

@@ -1,0 +1,8 @@
+table: PostLinks
+primary_key: Id
+columns:
+  Id: integer
+  PostId: integer
+  RelatedPostId: integer
+  LinkTypeId: integer
+  CreationDate: timestamp

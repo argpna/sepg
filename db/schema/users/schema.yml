@@ -1,0 +1,16 @@
+table: Users
+primary_key: Id
+columns:
+  Id: integer
+  Reputation: integer
+  CreationDate: timestamp
+  DisplayName: varchar(255)
+  LastAccessDate: timestamp
+  WebsiteUrl: varchar(512)
+  Location: varchar(512)
+  AboutMe: text
+  Views: integer
+  UpVotes: integer
+  DownVotes: integer
+  ProfileImageUrl: varchar(512)
+  AccountId: integer
