@@ -1,0 +1,107 @@
+---
+name: sepg
+
+x-workdir-vol: &workdir_vol
+  working_dir: /sepg
+  volumes:
+    - ../:/sepg:rw,Z
+  environment:
+    PYTHONPATH: /sepg/src
+    SEPG_ROOT: /sepg
+
+x-user-ids: &user_ids
+  user: "${PUID}:${PGID}"
+
+services:
+  db:
+    image: "${POSTGRES_IMAGE}"
+    container_name: sepg-db
+    restart: unless-stopped
+    cpus: "${POSTGRES_CPUS}"
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+    command: ["postgres", "-c", "config_file=/etc/postgresql/conf.d/postgresql.conf"]
+    volumes:
+      - sepg_pgdata:/var/lib/postgresql
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+      - ./postgres/config:/etc/postgresql/conf.d:ro
+    networks: [sepg_infra_net]
+    ports:
+      - "${PG_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    profiles: ["db"]
+
+  loader:
+    <<: [*workdir_vol, *user_ids]
+    container_name: sepg-loader
+    build:
+      context: ..
+      dockerfile: docker/loader.Dockerfile
+    environment:
+      PYTHONPATH: /sepg/src
+      SEPG_ROOT: /sepg
+      POSTGRES_DSN: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+    command: ["bash","-lc","sleep infinity"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [sepg_infra_net]
+    profiles: ["loader"]
+
+  pgadmin:
+    image: "${PGADMIN_IMAGE}"
+    container_name: sepg-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "${PGADMIN_EMAIL}"
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_PASSWORD}"
+    ports:
+      - "${PGADMIN_PORT}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [sepg_infra_net]
+    profiles: ["tools"]
+
+  transmission:
+    image: "${TRANSMISSION_IMAGE}"
+    container_name: sepg-transmission
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ../data/xml:/downloads:rw,Z
+      - transmission_config:/config:rw
+    networks: [sepg_ingress_net]
+    ports:
+      - "${TRANSMISSION_PORT}:9091"
+    profiles: ["downloader"]
+
+  downloader:
+    <<: [*workdir_vol, *user_ids]
+    container_name: sepg-downloader
+    build:
+      context: ..
+      dockerfile: docker/downloader.Dockerfile
+    depends_on:
+      - transmission
+    volumes:
+      - ../:/sepg:rw,Z
+      - ../data/xml:/downloads:rw,Z
+    networks: [sepg_ingress_net]
+    profiles: ["downloader"]
+
+
+networks:
+  sepg_ingress_net:
+  sepg_infra_net:
+
+volumes:
+  sepg_pgdata:
+  transmission_config:
