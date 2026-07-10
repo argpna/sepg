@@ -50,6 +50,13 @@ cp docker/.env.example docker/.env
 > and tables you need, smaller sites are a good starting point
 > for a local setup.
 
+> [!WARNING]
+> On Windows, Docker Desktop's WSL2 backend bind-mounts this repo through a slow Windows<->Linux
+> filesystem bridge if the checkout lives on a Windows drive (`C:\...` or `/mnt/c/...`) - shard/load
+> steps can be ~20x slower (tests done on a vagrant box). Check out the repo inside a WSL2 distro's
+> own filesystem (e.g. `~/projects/sepg`), and prefer running a **_native Docker Engine_** inside that
+>distro over **_Docker Desktop_**, which avoids this bridge entirely.
+
 List files matching a filter:
 
 ```sh
