@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP on
 
-SELECT format('CREATE DATABASE %I OWNER %I', 'se_template', 'se')
+SELECT format('CREATE DATABASE %I OWNER %I', 'se_template', current_user)
 WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'se_template')
 \gexec
 
