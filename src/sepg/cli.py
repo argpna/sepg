@@ -63,6 +63,7 @@ def cmd_pipeline(args: argparse.Namespace) -> None:
         truncate_first=args.truncate_first,
         force_shard=args.force_shard,
         rm_staging=args.rm_staging,
+        rm_source_xml=args.rm_source_xml,
     )
     run_pipeline(pargs=pargs, pconn=_pg_conn(args))
 
@@ -165,6 +166,12 @@ def _add_pipeline_parser(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--truncate-first", action="store_true", help="Truncate table before loading")
     p.add_argument("--force-shard", action="store_true", help="Force re-shard even if manifest exists")
     p.add_argument("--rm-staging", action="store_true", help="Remove staging directory after successful load")
+    p.add_argument(
+        "--rm-source-xml",
+        action="store_true",
+        help="Delete source XML after successful load. note: this breaks --force-shard/shard-count "
+        "changes unless the files are re-extracted or re-downloaded first",
+    )
     p.set_defaults(func=cmd_pipeline)
 
 

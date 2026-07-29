@@ -12,9 +12,9 @@ from .manifest import Manifest
 from .paths import (
     ddl_dir,
     list_schema_tables,
-    pick_xml_path,
     schema_dir,
     staging_dir,
+    xml_path_for,
 )
 from .shard import ShardConfig, shard_xml
 
@@ -30,6 +30,7 @@ class PipelineArgs:
     truncate_first: bool = False
     force_shard: bool = False
     rm_staging: bool = False
+    rm_source_xml: bool = False
 
 
 def _need_atomic_reshard(
@@ -72,7 +73,7 @@ def process_table(*, table: str, pargs: PipelineArgs, pconn: PgConn) -> None:
     emit_ddl(t_schema_dir, out_sql)
     step("ddl", f"wrote {out_sql}")
 
-    xml_path = pick_xml_path(pargs.site, table)
+    xml_path = xml_path_for(pargs.site, table)
     step("xml", str(xml_path))
 
     final_dir = staging_dir() / pargs.site / table
@@ -86,6 +87,8 @@ def process_table(*, table: str, pargs: PipelineArgs, pconn: PgConn) -> None:
     )
 
     if need:
+        if not xml_path.exists():
+            raise FileNotFoundError(f"XML not found: {xml_path} (re-shard needed: {reason})")
         tmp_dir = final_dir.with_name(final_dir.name + f".tmp-{uuid.uuid4().hex[:8]}")
         step("shard", f"re-shard into {tmp_dir}")
         try:
@@ -122,6 +125,10 @@ def process_table(*, table: str, pargs: PipelineArgs, pconn: PgConn) -> None:
     if pargs.rm_staging:
         remove_staging_dir(manifest_path)
         step("rm", f"removed staging dir {manifest_path.parent}")
+
+    if pargs.rm_source_xml and xml_path.exists():
+        xml_path.unlink()
+        step("rm", f"removed source xml {xml_path}")
 
 
 def run_pipeline(*, pargs: PipelineArgs, pconn: PgConn) -> None:

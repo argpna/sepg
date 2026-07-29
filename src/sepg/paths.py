@@ -56,8 +56,12 @@ def _xml_filename(table: str) -> str:
     return f"{name}.xml"
 
 
+def xml_path_for(site: str, table: str) -> Path:
+    return xml_dir() / site / _xml_filename(table)
+
+
 def pick_xml_path(site: str, table: str) -> Path:
-    path = xml_dir() / site / _xml_filename(table)
+    path = xml_path_for(site, table)
     if not path.exists():
         raise FileNotFoundError(f"XML not found: {path}")
     return path

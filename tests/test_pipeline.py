@@ -126,7 +126,7 @@ def test_resolve_tables_splits_strips_lowercases_and_drops_empties():
 
 
 def _pargs(**overrides) -> PipelineArgs:
-    defaults = dict(site="vi", tables=["posts"], shards=2, force_shard=False, rm_staging=False)
+    defaults = dict(site="vi", tables=["posts"], shards=2, force_shard=False, rm_staging=False, rm_source_xml=False)
     defaults.update(overrides)
     return PipelineArgs(**defaults)
 
@@ -164,7 +164,7 @@ def test_process_table_reuses_existing_manifest_without_resharding(tmp_path, mon
     monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
     monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
     monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
-    monkeypatch.setattr(pipeline, "pick_xml_path", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
     ddl_calls = []
     monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: ddl_calls.append(out_sql) or out_sql)
     monkeypatch.setattr(pipeline, "shard_xml", lambda **k: (_ for _ in ()).throw(AssertionError("should not reshard")))
@@ -196,7 +196,7 @@ def test_process_table_reshards_and_atomically_swaps_staging_dir(tmp_path, monke
     monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
     monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
     monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
-    monkeypatch.setattr(pipeline, "pick_xml_path", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
     monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
 
     def fake_shard_xml(*, xml_path, schema_dir, out_dir, cfg):
@@ -237,7 +237,7 @@ def test_process_table_cleans_up_tmp_dir_when_shard_fails(tmp_path, monkeypatch)
     monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
     monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
     monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
-    monkeypatch.setattr(pipeline, "pick_xml_path", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
     monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
 
     def failing_shard_xml(*, xml_path, schema_dir, out_dir, cfg):
@@ -267,7 +267,7 @@ def test_process_table_removes_staging_dir_when_requested(tmp_path, monkeypatch)
     monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
     monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
     monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
-    monkeypatch.setattr(pipeline, "pick_xml_path", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
     monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
     monkeypatch.setattr(pipeline, "load_manifest", lambda **k: None)
     rm_calls = []
@@ -276,6 +276,107 @@ def test_process_table_removes_staging_dir_when_requested(tmp_path, monkeypatch)
     process_table(table="posts", pargs=_pargs(shards=2, rm_staging=True), pconn=object())
 
     assert rm_calls == [manifest_path]
+
+
+def test_process_table_removes_source_xml_after_reshard_when_requested(tmp_path, monkeypatch):
+    schema_root = tmp_path / "schema"
+    (schema_root / "posts").mkdir(parents=True)
+    xml_path = tmp_path / "Posts.xml"
+    xml_path.write_text("<posts/>", encoding="utf-8")
+    staging_root = tmp_path / "staging"
+
+    monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
+    monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
+    monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
+
+    def fake_shard_xml(*, xml_path, schema_dir, out_dir, cfg):
+        Manifest(
+            table="posts",
+            primary_key="id",
+            columns=["id"],
+            source_xml=str(xml_path),
+            shards=cfg.shards,
+            parts=[],
+            total_rows=0,
+        ).write(out_dir / "manifest.json")
+
+    monkeypatch.setattr(pipeline, "shard_xml", fake_shard_xml)
+    monkeypatch.setattr(pipeline, "load_manifest", lambda **k: None)
+
+    process_table(table="posts", pargs=_pargs(shards=2, rm_source_xml=True), pconn=object())
+
+    assert not xml_path.exists()
+
+
+def test_process_table_removes_source_xml_on_reuse_path_when_requested(tmp_path, monkeypatch):
+    schema_root = tmp_path / "schema"
+    (schema_root / "posts").mkdir(parents=True)
+    xml_path = tmp_path / "Posts.xml"
+    xml_path.write_text("<posts/>", encoding="utf-8")
+    staging_root = tmp_path / "staging"
+    final_dir = staging_root / "vi" / "posts"
+    final_dir.mkdir(parents=True)
+    manifest_path = final_dir / "manifest.json"
+    Manifest(
+        table="posts", primary_key="id", columns=["id"], source_xml=str(xml_path), shards=2, parts=[], total_rows=0
+    ).write(manifest_path)
+
+    monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
+    monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
+    monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
+    monkeypatch.setattr(pipeline, "shard_xml", lambda **k: (_ for _ in ()).throw(AssertionError("should not reshard")))
+    monkeypatch.setattr(pipeline, "load_manifest", lambda **k: None)
+
+    process_table(table="posts", pargs=_pargs(shards=2, rm_source_xml=True), pconn=object())
+
+    assert not xml_path.exists()
+
+
+def test_process_table_leaves_source_xml_alone_by_default(tmp_path, monkeypatch):
+    schema_root = tmp_path / "schema"
+    (schema_root / "posts").mkdir(parents=True)
+    xml_path = tmp_path / "Posts.xml"
+    xml_path.write_text("<posts/>", encoding="utf-8")
+    staging_root = tmp_path / "staging"
+    final_dir = staging_root / "vi" / "posts"
+    final_dir.mkdir(parents=True)
+    manifest_path = final_dir / "manifest.json"
+    Manifest(
+        table="posts", primary_key="id", columns=["id"], source_xml=str(xml_path), shards=2, parts=[], total_rows=0
+    ).write(manifest_path)
+
+    monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
+    monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
+    monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
+    monkeypatch.setattr(pipeline, "shard_xml", lambda **k: (_ for _ in ()).throw(AssertionError("should not reshard")))
+    monkeypatch.setattr(pipeline, "load_manifest", lambda **k: None)
+
+    process_table(table="posts", pargs=_pargs(shards=2), pconn=object())
+
+    assert xml_path.exists()
+
+
+def test_process_table_raises_clear_error_when_reshard_needed_but_xml_missing(tmp_path, monkeypatch):
+    schema_root = tmp_path / "schema"
+    (schema_root / "posts").mkdir(parents=True)
+    xml_path = tmp_path / "Posts.xml"  # never created
+    staging_root = tmp_path / "staging"
+
+    monkeypatch.setattr(pipeline, "schema_dir", lambda: schema_root)
+    monkeypatch.setattr(pipeline, "ddl_dir", lambda: tmp_path / "ddl")
+    monkeypatch.setattr(pipeline, "staging_dir", lambda: staging_root)
+    monkeypatch.setattr(pipeline, "xml_path_for", lambda site, table: xml_path)
+    monkeypatch.setattr(pipeline, "emit_ddl", lambda schema_dir, out_sql: out_sql)
+    monkeypatch.setattr(pipeline, "shard_xml", lambda **k: (_ for _ in ()).throw(AssertionError("should not reshard")))
+
+    with pytest.raises(FileNotFoundError, match="XML not found"):
+        process_table(table="posts", pargs=_pargs(shards=2), pconn=object())
 
 
 def test_run_pipeline_ensures_db_and_processes_every_table(monkeypatch):

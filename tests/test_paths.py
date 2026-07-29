@@ -71,3 +71,8 @@ def test_pick_xml_path_raises_when_file_missing(tmp_path, monkeypatch):
     monkeypatch.setenv("SEPG_ROOT", str(tmp_path))
     with pytest.raises(FileNotFoundError):
         paths.pick_xml_path("vi", "posts")
+
+
+def test_xml_path_for_does_not_require_file_to_exist(tmp_path, monkeypatch):
+    monkeypatch.setenv("SEPG_ROOT", str(tmp_path))
+    assert paths.xml_path_for("vi", "posts") == tmp_path / "data" / "xml" / "vi" / "Posts.xml"

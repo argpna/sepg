@@ -39,6 +39,7 @@ sepg pipeline
   --truncate-first         Truncate table before loading
   --force-shard            Force re-shard even if manifest exists
   --rm-staging             Delete staging directory after successful load
+  --rm-source-xml          Delete source XML after successful load
 ```
 
 Example:
