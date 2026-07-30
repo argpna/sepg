@@ -48,14 +48,16 @@ cp docker/.env.example docker/.env
 > Archives, extracted XML, and staging CSV files can consume significant disk space. Browse the
 > torrent contents first (or list them via cli with `--list-files`) and pick only the sites
 > and tables you need, smaller sites are a good starting point
-> for a local setup.
+> for a local setup. You can also reclaim space as you go: `download --rm-archives` deletes `.7z`
+> files after extraction, and `pipeline --rm-staging` / `pipeline --rm-source-xml` delete staging
+> CSVs / source XML once a table has loaded successfully.
 
-> [!WARNING]
+> [!NOTE]
 > On Windows, Docker Desktop's WSL2 backend bind-mounts this repo through a slow Windows<->Linux
 > filesystem bridge if the checkout lives on a Windows drive (`C:\...` or `/mnt/c/...`) - shard/load
 > steps can be ~20x slower (tests done on a vagrant box). Check out the repo inside a WSL2 distro's
-> own filesystem (e.g. `~/projects/sepg`), and prefer running a **_native Docker Engine_** inside that
->distro over **_Docker Desktop_**, which avoids this bridge entirely.
+> own filesystem (e.g. `~/projects/sepg`), and prefer running a **native Docker Engine** inside that
+> distro over **Docker Desktop**, which avoids this bridge entirely.
 
 List files matching a filter:
 
@@ -87,7 +89,7 @@ $COMPOSE --profile downloader run --rm downloader \
     --rm-archives
 ```
 
-XML files land in `data/xml/vi/`.
+XML files are placed in `data/xml/vi/`.
 
 > [!NOTE]
 > Sites with per-table archives (e.g. `stackoverflow.com`) ship one 7z per table rather than
