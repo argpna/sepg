@@ -1,19 +1,11 @@
 # CLI reference
 
-`sepg` is a single command with five subcommands: `download`, `pipeline`, `shard`, `load`, `ddl`.
-
-Run `sepg --help` or `sepg <command> --help` for the full flag list at any time.
+Run `sepg --help` or `sepg <command> --help` for the full flag list.
 
 Invocation:
 
-- Local venv (after `./bootstrap/setup-host-venv.sh`): `sepg <command> ...`
-- Inside a Docker container (package isn't pip-installed there, only `PYTHONPATH=/sepg/src`):
-  `python -m sepg.cli <command> ...`
-
-Both forms run the exact same code (`src/sepg/cli.py`).
-
-Scripts read `SEPG_ROOT` to resolve `data/`, `db/schema/`, `db/ddl/` etc. relative to the project
-root; it's set to `/sepg` inside Docker.
+- When using local venv (after running `./bootstrap/setup-host-venv.sh`): `sepg <command> ...`
+- Inside a Docker container: `python -m sepg.cli <command> ...`
 
 ---
 
@@ -66,8 +58,7 @@ docker compose --env-file docker/.env -f docker/compose.yml --profile db --profi
 These two parallelism knobs have different bottlenecks:
 
 - **`--shard-workers`** is I/O bound. Multiple workers read byte ranges of the same XML file
-  concurrently and write to CSV shards. Adding workers past what your storage can feed causes
-  contention without throughput gains. Default is 1, increase only if profiling shows the disk
+  concurrently and write to CSV shards. Default is 1, increase only if profiling shows the disk
   is underutilised.
 
 - **`--load-workers`** is CPU/network bound. Each worker runs an independent `COPY` stream into
@@ -186,10 +177,16 @@ sepg download
   --force-torrent          Re-download .torrent file even if cached
 ```
 
+### `--out-dir`
+
+Path inside the downloader container. It's mounted from the host `/downloads` (Transmission's
+default download path) -> `data/xml/`, so `--out-dir /downloads/vi` writes to `data/xml/vi/` on
+the host.
+
 ### `--verify-hashes`
 
-Opt-in post-download integrity check: re-hashes each wanted file's on-disk bytes against the SHA1
-piece hashes recorded in the `.torrent` file itself, scoped to just the files downloaded.
+Opt-in post-download integrity check: re-hashes each downloaded file's on-disk bytes against the SHA1
+piece hashes recorded in the `.torrent` file.
 
 Examples:
 

@@ -55,9 +55,10 @@ cp docker/.env.example docker/.env
 > [!NOTE]
 > On Windows, Docker Desktop's WSL2 backend bind-mounts this repo through a slow Windows<->Linux
 > filesystem bridge if the checkout lives on a Windows drive (`C:\...` or `/mnt/c/...`) - shard/load
-> steps can be ~20x slower (tests done on a vagrant box). Check out the repo inside a WSL2 distro's
+> steps can be ~20x slower (tests done on a vagrant box). Check out the git repo inside a WSL2 distro's
 > own filesystem (e.g. `~/projects/sepg`), and prefer running a **native Docker Engine** inside that
-> distro over **Docker Desktop**, which avoids this bridge entirely.
+> distro over **Docker Desktop**. (i.e follow the Docker engine Linux install docs -
+> See [install](https://docs.docker.com/engine/install/) and [post-install](https://docs.docker.com/engine/install/linux-postinstall/) instructions for more information
 
 List files matching a filter:
 
